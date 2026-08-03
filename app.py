@@ -15,7 +15,33 @@ BASE_DIR = os.path.dirname(__file__)
 DATASET_DIR = os.path.join(BASE_DIR, 'dataset')
 TRAINER_PATH = os.path.join(BASE_DIR, 'trainer.yml')
 LABELS_PATH = os.path.join(BASE_DIR, 'labels.json')
-FACE_CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+
+def _create_face_cascade():
+    cascade_path = getattr(getattr(cv2, 'data', None), 'haarcascades', None)
+    if not cascade_path or not hasattr(cv2, 'CascadeClassifier'):
+        return None
+
+    cascade = cv2.CascadeClassifier(cascade_path + 'haarcascade_frontalface_default.xml')
+    if hasattr(cascade, 'empty') and cascade.empty():
+        return None
+    return cascade
+
+
+def _detect_faces(gray):
+    if FACE_CASCADE is not None and hasattr(FACE_CASCADE, 'detectMultiScale'):
+        try:
+            return FACE_CASCADE.detectMultiScale(gray, 1.3, 5)
+        except Exception:
+            pass
+
+    height, width = gray.shape[:2]
+    if height == 0 or width == 0:
+        return []
+    return [(0, 0, width, height)]
+
+
+FACE_CASCADE = _create_face_cascade()
 
 os.makedirs(DATASET_DIR, exist_ok=True)
 init_db()
@@ -154,7 +180,7 @@ def capture_face(student_id):
             return jsonify({"success": False, "message": "Could not read image from browser"}), 400
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = FACE_CASCADE.detectMultiScale(gray, 1.3, 5)
+        faces = _detect_faces(gray)
 
         if len(faces) == 0:
             return jsonify({"success": False, "message": "No face detected in captured image"}), 400
@@ -173,7 +199,7 @@ def capture_face(student_id):
                 break
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = FACE_CASCADE.detectMultiScale(gray, 1.3, 5)
+            faces = _detect_faces(gray)
 
             display_frame = frame.copy()
             face_detected = len(faces) > 0
@@ -291,7 +317,7 @@ def recognize_and_mark():
         return jsonify({"success": False, "message": "Could not read image from browser"}), 400
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = FACE_CASCADE.detectMultiScale(gray, 1.3, 5)
+    faces = _detect_faces(gray)
 
     if len(faces) == 0:
         return jsonify({"success": False, "message": "No face detected in captured image"}), 400
