@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance System - Login</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<canvas id="cursor-canvas"></canvas>
+
+<div class="login-wrapper">
+  <div class="glass-card">
+    <h1>Attendance System</h1>
+    <p class="subtitle" id="form-subtitle">Login to your teacher account</p>
+
+    <div id="signup-fields" style="display:none;">
+      <div class="input-group">
+        <input type="text" id="name" placeholder="Full Name">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <input type="email" id="email" placeholder="Email">
+    </div>
+    <div class="input-group">
+      <input type="password" id="password" placeholder="Password">
+    </div>
+
+    <button class="btn-primary" id="submit-btn">Login</button>
+    <div class="error-msg" id="error-msg"></div>
+
+    <div class="switch-link">
+      <span id="switch-text">Don't have an account? <a id="switch-link">Sign up</a></span>
+    </div>
+  </div>
+</div>
+
+<script src="/static/script.js"></script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+flask
+opencv-python
+opencv-contrib-python
+werkzeug
+
+
+pip install -r requirements.txt

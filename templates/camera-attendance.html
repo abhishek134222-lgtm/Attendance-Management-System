@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera Attendance</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<canvas id="cursor-canvas"></canvas>
+
+<nav class="navbar">
+  <div class="logo">AttendX</div>
+  <div class="nav-links">
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/mark-attendance.html">Mark Attendance</a>
+    <a href="/camera-attendance.html" class="active">Camera Attendance</a>
+    <a href="/students.html">Students</a>
+    <a href="/reports.html">Reports</a>
+  </div>
+  <button class="logout-btn" id="logout-btn">Logout</button>
+</nav>
+
+<div class="container">
+  <h1 class="page-title">Camera Attendance</h1>
+  <p class="page-subtitle">Opens your laptop camera and recognizes the student's face</p>
+
+  <div class="glass-card camera-box">
+    <button class="btn-primary" id="start-recognition-btn">Start Camera Recognition</button>
+    <div id="result-box" style="margin-top:20px; font-size:15px;"></div>
+  </div>
+</div>
+
+<script src="/static/script.js"></script>
+<script src="/static/camera.js"></script>
+</body>
+</html>

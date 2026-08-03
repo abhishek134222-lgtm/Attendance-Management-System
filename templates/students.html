@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Students</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<canvas id="cursor-canvas"></canvas>
+
+<nav class="navbar">
+  <div class="logo">AttendX</div>
+  <div class="nav-links">
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/mark-attendance.html">Mark Attendance</a>
+    <a href="/camera-attendance.html">Camera Attendance</a>
+    <a href="/students.html" class="active">Students</a>
+    <a href="/reports.html">Reports</a>
+  </div>
+  <button class="logout-btn" id="logout-btn">Logout</button>
+</nav>
+
+<div class="container">
+  <h1 class="page-title">Manage Students</h1>
+  <p class="page-subtitle">Add students, then register their face for camera attendance</p>
+
+  <div class="glass-card" style="width:100%; max-width:600px; margin-bottom:30px;">
+    <div class="input-group"><input type="text" id="student-name" placeholder="Student Name"></div>
+    <div class="input-group"><input type="text" id="student-roll" placeholder="Roll Number"></div>
+    <div class="input-group"><input type="text" id="student-class" placeholder="Class (e.g. CSE-2A)"></div>
+    <button class="btn-primary" id="add-student-btn">Add Student</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h3>All Students</h3>
+      <select id="class-filter" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 8px 12px; border-radius: 8px; outline: none;">
+        <option value="">All Classes</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr><th>Roll No</th><th>Name</th><th>Class</th><th>Face Registered</th><th>Actions</th></tr></thead>
+      <tbody id="students-table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/static/script.js"></script>
+<script src="/static/students.js"></script>
+</body>
+</html>

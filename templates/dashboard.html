@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<canvas id="cursor-canvas"></canvas>
+
+<nav class="navbar">
+  <div class="logo">AttendX</div>
+  <div class="nav-links">
+    <a href="/dashboard.html" class="active">Dashboard</a>
+    <a href="/mark-attendance.html">Mark Attendance</a>
+    <a href="/camera-attendance.html">Camera Attendance</a>
+    <a href="/students.html">Students</a>
+    <a href="/reports.html">Reports</a>
+  </div>
+  <button class="logout-btn" id="logout-btn">Logout</button>
+</nav>
+
+<div class="container">
+  <h1 class="page-title">Welcome back, <span id="teacher-name">Teacher</span></h1>
+  <p class="page-subtitle">Here's your attendance overview</p>
+
+  <div class="stats-grid">
+    <div class="stat-card total" style="animation-delay:0.1s">
+      <div class="stat-value" id="total-students">0</div>
+      <div class="stat-label">Total Students</div>
+    </div>
+    <div class="stat-card present" style="animation-delay:0.2s">
+      <div class="stat-value" id="present-today">0</div>
+      <div class="stat-label">Present Today</div>
+    </div>
+    <div class="stat-card absent" style="animation-delay:0.3s">
+      <div class="stat-value" id="absent-today">0</div>
+      <div class="stat-label">Absent Today</div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header"><h3>Today's Attendance</h3></div>
+    <table>
+      <thead><tr><th>Roll No</th><th>Name</th><th>Class</th><th>Status</th></tr></thead>
+      <tbody id="today-table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/static/script.js"></script>
+<script src="/static/dashboard.js"></script>
+</body>
+</html>
