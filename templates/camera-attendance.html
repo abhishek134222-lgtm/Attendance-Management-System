@@ -24,10 +24,13 @@
 
 <div class="container">
   <h1 class="page-title">Camera Attendance</h1>
-  <p class="page-subtitle">Opens your laptop camera and recognizes the student's face</p>
+  <p class="page-subtitle">Uses your device camera to recognize the student and mark attendance</p>
 
-  <div class="glass-card camera-box">
-    <button class="btn-primary" id="start-recognition-btn">Start Camera Recognition</button>
+  <div class="glass-card camera-box" style="max-width:480px;">
+    <video id="camera-video" autoplay playsinline style="width:100%; border-radius:12px; background:#000; display:none;"></video>
+    <canvas id="camera-canvas" style="display:none;"></canvas>
+    <button class="btn-primary" id="start-camera-btn">Open Camera</button>
+    <button class="btn-primary" id="scan-btn" style="display:none;">Scan Face</button>
     <div id="result-box" style="margin-top:20px; font-size:15px;"></div>
   </div>
 </div>

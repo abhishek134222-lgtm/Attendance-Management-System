@@ -1,4 +1,7 @@
 let allStudents = [];
+let stream = null;
+let currentStudentId = null;
+let captureCount = 0;
 
 async function loadStudents() {
   try {
@@ -14,7 +17,6 @@ async function loadStudents() {
 function populateClassFilter() {
   const filterEl = document.getElementById('class-filter');
   if (!filterEl) return;
-
   const classes = [...new Set(allStudents.map(s => s.class))].sort();
   const currentValue = filterEl.value;
   filterEl.innerHTML = '<option value="">All Classes</option>';
@@ -45,7 +47,7 @@ function renderStudents(students) {
       <td>${s.class}</td>
       <td>${badge}</td>
       <td>
-        <button class="btn-small" onclick="captureFace(${s.id})">Register Face</button>
+        <button class="btn-small" onclick="openCameraModal(${s.id}, '${s.name.replace(/'/g, "\\'")}')">Register Face</button>
         <button class="btn-danger" onclick="deleteStudent(${s.id})">Remove</button>
       </td>
     `;
@@ -91,17 +93,66 @@ document.getElementById('add-student-btn').addEventListener('click', async () =>
   }
 });
 
-async function captureFace(id) {
-  showToast('Camera opening... Press SPACE to capture, Q to finish', 'success');
+async function openCameraModal(studentId, studentName) {
+  currentStudentId = studentId;
+  captureCount = 0;
+  document.getElementById('camera-title').textContent = `Register Face - ${studentName}`;
+  document.getElementById('capture-count').textContent = '0 photos captured';
+  document.getElementById('camera-status').textContent = '';
+  document.getElementById('camera-modal').style.display = 'flex';
+
   try {
-    const res = await fetch(`/api/students/${id}/capture`, { method: 'POST' });
-    const data = await res.json();
-    showToast(data.message, data.success ? 'success' : 'error');
-    loadStudents();
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+    document.getElementById('camera-video').srcObject = stream;
   } catch (err) {
-    showToast('Failed to capture face', 'error');
+    showToast('Camera access denied or unavailable', 'error');
+    closeCameraModal();
   }
 }
+
+function closeCameraModal() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  document.getElementById('camera-modal').style.display = 'none';
+  loadStudents();
+}
+
+document.getElementById('capture-btn').addEventListener('click', async () => {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+  document.getElementById('camera-status').textContent = 'Processing...';
+
+  try {
+    const res = await fetch(`/api/students/${currentStudentId}/capture`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: imageData })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      captureCount = data.count;
+      document.getElementById('capture-count').textContent = `${captureCount} photos captured`;
+      document.getElementById('camera-status').textContent = 'Photo captured successfully';
+      document.getElementById('camera-status').style.color = '#4ade80';
+    } else {
+      document.getElementById('camera-status').textContent = data.message;
+      document.getElementById('camera-status').style.color = '#f87171';
+    }
+  } catch (err) {
+    document.getElementById('camera-status').textContent = 'Failed to capture. Try again.';
+    document.getElementById('camera-status').style.color = '#f87171';
+  }
+});
+
+document.getElementById('close-camera-btn').addEventListener('click', closeCameraModal);
 
 async function deleteStudent(id) {
   if (!confirm('Remove this student?')) return;

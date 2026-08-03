@@ -47,6 +47,21 @@
   </div>
 </div>
 
+<!-- Camera Modal -->
+<div id="camera-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; flex-direction:column;">
+  <div class="glass-card" style="width:90%; max-width:480px; text-align:center;">
+    <h3 id="camera-title" style="margin-bottom:15px;">Register Face</h3>
+    <video id="camera-video" autoplay playsinline style="width:100%; border-radius:12px; background:#000;"></video>
+    <canvas id="camera-canvas" style="display:none;"></canvas>
+    <p id="capture-count" style="margin-top:12px; color:rgba(255,255,255,0.7);">0 photos captured</p>
+    <div style="display:flex; gap:10px; margin-top:15px;">
+      <button class="btn-primary" id="capture-btn" style="margin-top:0;">Capture Photo</button>
+      <button class="btn-danger" id="close-camera-btn" style="border-radius:10px;">Done</button>
+    </div>
+    <p id="camera-status" style="margin-top:10px; font-size:13px; color:#4ade80;"></p>
+  </div>
+</div>
+
 <script src="/static/script.js"></script>
 <script src="/static/students.js"></script>
 </body>
