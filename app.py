@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import cv2
 import numpy as np
 from datetime import date
@@ -137,51 +138,78 @@ def capture_face(student_id):
     existing_count = len([f for f in os.listdir(student_dir) if f.endswith('.jpg')])
     count = existing_count
 
-    cam = cv2.VideoCapture(0)
+    payload = request.get_json(silent=True) or {}
+    image_data = payload.get('image')
 
-    while True:
-        ret, frame = cam.read()
-        if not ret:
-            break
+    if image_data:
+        try:
+            if ',' in image_data:
+                image_data = image_data.split(',', 1)[1]
+            image_bytes = base64.b64decode(image_data)
+            np_arr = np.frombuffer(image_bytes, dtype=np.uint8)
+            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            if frame is None:
+                raise ValueError('Invalid image payload')
+        except Exception:
+            return jsonify({"success": False, "message": "Could not read image from browser"}), 400
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = FACE_CASCADE.detectMultiScale(gray, 1.3, 5)
 
-        display_frame = frame.copy()
-        face_detected = len(faces) > 0
+        if len(faces) == 0:
+            return jsonify({"success": False, "message": "No face detected in captured image"}), 400
 
-        for (x, y, w, h) in faces:
-            color = (0, 255, 0) if face_detected else (0, 0, 255)
-            cv2.rectangle(display_frame, (x, y), (x+w, y+h), color, 2)
+        (x, y, w, h) = faces[0]
+        face_img = gray[y:y+h, x:x+w]
+        count += 1
+        cv2.imwrite(os.path.join(student_dir, f"{count}.jpg"), face_img)
+        captured_now = 1
+    else:
+        cam = cv2.VideoCapture(0)
 
-        cv2.putText(display_frame, f"Captured: {count} photos", (15, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        cv2.putText(display_frame, "SPACE = capture photo | Q = finish", (15, 60),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        while True:
+            ret, frame = cam.read()
+            if not ret:
+                break
 
-        cv2.imshow(f'Register Face - {student["name"]}', display_frame)
-        key = cv2.waitKey(1) & 0xFF
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = FACE_CASCADE.detectMultiScale(gray, 1.3, 5)
 
-        if key == ord(' '):
-            if len(faces) == 0:
-                continue
-            (x, y, w, h) = faces[0]
-            face_img = gray[y:y+h, x:x+w]
-            count += 1
-            cv2.imwrite(os.path.join(student_dir, f"{count}.jpg"), face_img)
+            display_frame = frame.copy()
+            face_detected = len(faces) > 0
 
-            flash = display_frame.copy()
-            cv2.rectangle(flash, (0, 0), (flash.shape[1], flash.shape[0]), (255, 255, 255), -1)
-            cv2.imshow(f'Register Face - {student["name"]}', flash)
-            cv2.waitKey(80)
+            for (x, y, w, h) in faces:
+                color = (0, 255, 0) if face_detected else (0, 0, 255)
+                cv2.rectangle(display_frame, (x, y), (x+w, y+h), color, 2)
 
-        elif key == ord('q'):
-            break
+            cv2.putText(display_frame, f"Captured: {count} photos", (15, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(display_frame, "SPACE = capture photo | Q = finish", (15, 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
 
-    cam.release()
-    cv2.destroyAllWindows()
+            cv2.imshow(f'Register Face - {student["name"]}', display_frame)
+            key = cv2.waitKey(1) & 0xFF
 
-    captured_now = count - existing_count
+            if key == ord(' '):
+                if len(faces) == 0:
+                    continue
+                (x, y, w, h) = faces[0]
+                face_img = gray[y:y+h, x:x+w]
+                count += 1
+                cv2.imwrite(os.path.join(student_dir, f"{count}.jpg"), face_img)
+
+                flash = display_frame.copy()
+                cv2.rectangle(flash, (0, 0), (flash.shape[1], flash.shape[0]), (255, 255, 255), -1)
+                cv2.imshow(f'Register Face - {student["name"]}', flash)
+                cv2.waitKey(80)
+
+            elif key == ord('q'):
+                break
+
+        cam.release()
+        cv2.destroyAllWindows()
+        captured_now = count - existing_count
+
     if captured_now == 0 and existing_count == 0:
         return jsonify({"success": False, "message": "No photos captured. Try again."})
 
@@ -192,7 +220,11 @@ def capture_face(student_id):
     conn.commit()
     conn.close()
 
-    return jsonify({"success": True, "message": f"{captured_now} new photos captured (total {count}) for {student['name']}"})
+    return jsonify({
+        "success": True,
+        "message": f"{captured_now} new photos captured (total {count}) for {student['name']}",
+        "count": captured_now
+    })
 
 # ================= TRAINING =================
 
@@ -241,49 +273,42 @@ def recognize_and_mark():
     with open(LABELS_PATH, 'r') as f:
         label_map = json.load(f)
 
-    cam = cv2.VideoCapture(0)
-    recognized_id = None
-    attempts = 0
+    payload = request.get_json(silent=True) or {}
+    image_data = payload.get('image')
 
-    while attempts < 100:
-        ret, frame = cam.read()
-        if not ret:
-            break
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = FACE_CASCADE.detectMultiScale(gray, 1.3, 5)
+    if not image_data:
+        return jsonify({"success": False, "message": "No image provided"}), 400
 
-        for (x, y, w, h) in faces:
-            face_img = gray[y:y+h, x:x+w]
-            label_id, confidence = recognizer.predict(face_img)
+    try:
+        if ',' in image_data:
+            image_data = image_data.split(',', 1)[1]
+        image_bytes = base64.b64decode(image_data)
+        np_arr = np.frombuffer(image_bytes, dtype=np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        if frame is None:
+            raise ValueError('Invalid image payload')
+    except Exception:
+        return jsonify({"success": False, "message": "Could not read image from browser"}), 400
 
-            if confidence < 70:
-                recognized_id = label_map.get(str(label_id))
-                color = (0, 255, 0)
-                text = f"Match ({round(confidence,1)})"
-            else:
-                color = (0, 0, 255)
-                text = "Unknown"
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = FACE_CASCADE.detectMultiScale(gray, 1.3, 5)
 
-            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
-            cv2.putText(frame, text, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+    if len(faces) == 0:
+        return jsonify({"success": False, "message": "No face detected in captured image"}), 400
 
-        cv2.imshow('Recognizing - Press Q to cancel', frame)
+    (x, y, w, h) = faces[0]
+    face_img = gray[y:y+h, x:x+w]
+    label_id, confidence = recognizer.predict(face_img)
 
-        if recognized_id:
-            cv2.waitKey(800)
-            break
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        attempts += 1
+    if confidence >= 70:
+        return jsonify({"success": False, "message": "Face not recognized"}), 400
 
-    cam.release()
-    cv2.destroyAllWindows()
-
+    recognized_id = label_map.get(str(label_id))
     if not recognized_id:
-        return jsonify({"success": False, "message": "No face recognized"})
+        return jsonify({"success": False, "message": "Student record missing"}), 400
 
     conn = get_db()
-    student = conn.execute('SELECT * FROM students WHERE id=?', (recognized_id,)).fetchone()
+    student = conn.execute('SELECT * FROM students WHERE id=?', (int(recognized_id),)).fetchone()
     if not student:
         conn.close()
         return jsonify({"success": False, "message": "Student record missing"})
