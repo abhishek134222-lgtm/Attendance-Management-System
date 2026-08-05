@@ -66,6 +66,10 @@ python -m pip install -r requirements.txt
 python app.py
 ```
 
+### 5. Deploy on Render
+
+Use `python app.py` as the start command, or deploy from `render.yaml` / `Procfile` so Render does not try to execute `app.py` directly. The app now listens on the `PORT` environment variable that Render provides.
+
 ### 4. Open in Browser
 
 Navigate to:
