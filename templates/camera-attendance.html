@@ -34,8 +34,11 @@
       <div class="camera-status" id="camera-status"><span></span> Camera offline</div>
     </div>
     <canvas id="camera-canvas" style="display:none;"></canvas>
-    <button class="btn-primary" id="start-camera-btn">Start live scan</button>
-    <button class="btn-secondary" id="stop-camera-btn" style="display:none;">Stop camera</button>
+    <div class="camera-actions">
+      <button class="btn-primary" id="start-camera-btn">Start live scan</button>
+      <button class="btn-secondary" id="switch-camera-btn" hidden>Switch camera</button>
+      <button class="btn-secondary" id="stop-camera-btn" hidden>Stop camera</button>
+    </div>
     <div id="result-box" class="result-box" aria-live="polite">The scanner will begin automatically after camera access is granted.</div>
     <div id="recognition-list" class="recognition-list"></div>
   </div>

@@ -28,6 +28,7 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 9999;
+  opacity: .58;
 }
 
 .login-wrapper {
@@ -364,13 +365,16 @@ tbody tr:hover {
 
 /* Live scanner */
 .camera-box { max-width: 640px; width: 100%; }
-.camera-stage { position: relative; min-height: 310px; overflow: hidden; border: 1px solid #242a2c; border-radius: 14px; background: #000; }
+.camera-stage { position: relative; aspect-ratio: 16 / 10; min-height: 0; overflow: hidden; border: 1px solid #242a2c; border-radius: 14px; background: #000; }
 .camera-stage::before { content: ''; position: absolute; inset: 14px; border: 1px solid rgba(97, 246, 182, .45); border-radius: 8px; z-index: 2; pointer-events: none; opacity: .25; transition: opacity .3s ease; }
-.camera-stage:has(.is-active)::before { opacity: 1; animation: targetingPulse 2.2s ease-in-out infinite; }
-#camera-video { display: block; width: 100%; min-height: 310px; object-fit: cover; opacity: .18; transition: opacity .35s ease; transform: scaleX(-1); }
-#camera-video.is-active { opacity: 1; }
+.camera-stage.is-live::before { opacity: 1; animation: targetingPulse 2.2s ease-in-out infinite; }
+.camera-stage #camera-video { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .18; transition: opacity .35s ease; transform: scaleX(-1); }
+.camera-stage #camera-video.is-active { opacity: 1; }
+.camera-stage #camera-video.is-rear-camera { transform: none; }
+.camera-actions { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+.camera-actions .btn-primary, .camera-actions .btn-secondary { margin-top: 0; }
 .scan-line { position: absolute; left: 14px; right: 14px; top: 16px; height: 2px; background: #61f6b6; box-shadow: 0 0 14px #00c878; opacity: 0; z-index: 3; }
-.camera-stage:has(.is-active) .scan-line { opacity: .9; animation: scan 2.2s linear infinite; }
+.camera-stage.is-live .scan-line { opacity: .9; animation: scan 2.2s linear infinite; }
 .camera-status { position: absolute; left: 18px; bottom: 18px; z-index: 4; padding: 7px 10px; border: 1px solid #2a3132; border-radius: 999px; background: rgba(0,0,0,.72); font-size: 12px; }
 .camera-status span { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #677074; }
 .camera-status .is-live { background: #35e8a7; box-shadow: 0 0 9px #35e8a7; animation: livePulse 1s ease-in-out infinite; }
@@ -380,8 +384,21 @@ tbody tr:hover {
 .recognition-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .recognition-chip { display: flex; align-items: baseline; gap: 7px; padding: 8px 11px; border-radius: 8px; color: #67f6ba; background: rgba(0,200,120,.1); border: 1px solid rgba(97,246,182,.25); animation: resultIn .35s ease; font-size: 13px; }
 .recognition-chip small { color: #9ba8a9; }
-@keyframes scan { 0% { transform: translateY(0); } 50% { transform: translateY(275px); } 100% { transform: translateY(0); } }
+@keyframes scan { 0%, 100% { top: 16px; } 50% { top: calc(100% - 16px); } }
 @keyframes targetingPulse { 50% { border-color: rgba(97, 246, 182, .9); box-shadow: inset 0 0 22px rgba(0, 200, 120, .13); } }
 @keyframes livePulse { 50% { opacity: .35; } }
 @keyframes resultIn { from { transform: translateY(5px); opacity: .2; } to { transform: translateY(0); opacity: 1; } }
+@media (max-width: 700px) {
+  .navbar { padding: 14px 16px; gap: 10px; }
+  .navbar .nav-links { order: 3; width: 100%; gap: 4px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .navbar .nav-links a { white-space: nowrap; padding: 8px 10px; }
+  .container { padding: 28px 14px; }
+  .glass-card { padding: 22px 16px; border-radius: 16px; }
+  .page-title { font-size: 23px; }
+  .camera-stage { aspect-ratio: 3 / 4; }
+  .camera-stage::before { inset: 10px; }
+  .camera-status { left: 12px; bottom: 12px; }
+  .result-box { margin-top: 16px; font-size: 14px; }
+}
+@media (pointer: coarse) { #cursor-canvas { display: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
