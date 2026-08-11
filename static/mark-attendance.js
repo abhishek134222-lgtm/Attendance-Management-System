@@ -2,6 +2,7 @@ let studentsList = [];
 let statusMap = {};
 
 const dateInput = document.getElementById('attendance-date');
+const subjectInput = document.getElementById('attendance-subject');
 dateInput.value = new Date().toISOString().split('T')[0];
 
 async function loadStudents() {
@@ -45,15 +46,22 @@ function renderTable() {
 
 document.getElementById('save-attendance-btn').addEventListener('click', async () => {
   const date = dateInput.value;
+  const subject = subjectInput.value.trim();
+  if (!subject) {
+    showToast('Please enter a subject name', 'error');
+    subjectInput.focus();
+    return;
+  }
   const records = Object.keys(statusMap).map(id => ({ student_id: id, status: statusMap[id] }));
 
   try {
     const res = await fetch('/api/attendance/mark', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, records })
+      body: JSON.stringify({ date, subject, records })
     });
-    if (res.ok) showToast('Attendance saved successfully!');
+    if (res.ok) showToast(`${subject} attendance saved successfully!`);
+    else showToast((await res.json()).message || 'Failed to save attendance', 'error');
   } catch (err) {
     showToast('Failed to save attendance', 'error');
   }

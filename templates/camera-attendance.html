@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Camera Attendance</title>
+<title>Live Attendance Scanner</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -23,15 +23,21 @@
 </nav>
 
 <div class="container">
-  <h1 class="page-title">Camera Attendance</h1>
-  <p class="page-subtitle">Uses your device camera to recognize the student and mark attendance</p>
+  <h1 class="page-title">Live Attendance Scanner</h1>
+  <p class="page-subtitle">Enter a subject, then open the camera. Every registered face in view is marked present automatically.</p>
 
-  <div class="glass-card camera-box" style="max-width:480px;">
-    <video id="camera-video" autoplay playsinline style="width:100%; border-radius:12px; background:#000; display:none;"></video>
+  <div class="glass-card camera-box">
+    <div class="input-group"><input type="text" id="camera-subject" placeholder="Subject name (e.g. Physics)" maxlength="80" required></div>
+    <div class="camera-stage">
+      <video id="camera-video" autoplay playsinline></video>
+      <div class="scan-line" aria-hidden="true"></div>
+      <div class="camera-status" id="camera-status"><span></span> Camera offline</div>
+    </div>
     <canvas id="camera-canvas" style="display:none;"></canvas>
-    <button class="btn-primary" id="start-camera-btn">Open Camera</button>
-    <button class="btn-primary" id="scan-btn" style="display:none;">Scan Face</button>
-    <div id="result-box" style="margin-top:20px; font-size:15px;"></div>
+    <button class="btn-primary" id="start-camera-btn">Start live scan</button>
+    <button class="btn-secondary" id="stop-camera-btn" style="display:none;">Stop camera</button>
+    <div id="result-box" class="result-box" aria-live="polite">The scanner will begin automatically after camera access is granted.</div>
+    <div id="recognition-list" class="recognition-list"></div>
   </div>
 </div>
 

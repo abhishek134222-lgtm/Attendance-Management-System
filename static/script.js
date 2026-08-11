@@ -30,54 +30,100 @@ function showToast(message, type = 'success') {
 }
 
 const canvas = document.getElementById('cursor-canvas');
-if (canvas) {
+if (canvas && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   const ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  let width = 0;
+  let height = 0;
+  let pointer = null;
+  let lastPoint = null;
+  let hue = 155;
+  let particles = [];
+  let frameId;
+
+  function resizeCanvas() {
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width * pixelRatio;
+    canvas.height = height * pixelRatio;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  }
+
+  resizeCanvas();
 
   window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    resizeCanvas();
   });
 
-  let particles = [];
-  const colors = ['#a78bfa', '#60a5fa', '#818cf8', '#c084fc'];
-
   window.addEventListener('mousemove', (e) => {
-    for (let i = 0; i < 2; i++) {
+    const point = { x: e.clientX, y: e.clientY };
+    const distance = lastPoint
+      ? Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y)
+      : 0;
+    const count = Math.min(5, Math.max(1, Math.ceil(distance / 10)));
+
+    pointer = point;
+    hue = (hue + 3 + distance * 0.35) % 360;
+
+    for (let i = 0; i < count; i++) {
+      const progress = count === 1 ? 1 : i / (count - 1);
+      const x = lastPoint ? lastPoint.x + (point.x - lastPoint.x) * progress : point.x;
+      const y = lastPoint ? lastPoint.y + (point.y - lastPoint.y) * progress : point.y;
       particles.push({
-        x: e.clientX,
-        y: e.clientY,
-        size: Math.random() * 4 + 2,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        x,
+        y,
+        size: 3 + Math.random() * 4 + Math.min(distance / 18, 3),
+        hue: (hue + i * 12) % 360,
         life: 1,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: (Math.random() - 0.5) * 1.5
+        vx: (Math.random() - 0.5) * 0.75,
+        vy: (Math.random() - 0.5) * 0.75 - 0.15
       });
     }
+    lastPoint = point;
   });
 
   function animateParticles() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles.forEach((p, i) => {
+    ctx.clearRect(0, 0, width, height);
+    ctx.globalCompositeOperation = 'lighter';
+
+    particles = particles.filter((p) => {
       p.x += p.vx;
       p.y += p.vy;
-      p.life -= 0.02;
-      p.size *= 0.98;
-
-      if (p.life <= 0) {
-        particles.splice(i, 1);
-        return;
-      }
-
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = p.life;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      p.life -= 0.028;
+      p.size *= 0.975;
+      p.hue = (p.hue + 0.8) % 360;
+      return p.life > 0;
     });
-    requestAnimationFrame(animateParticles);
+
+    particles.forEach((p) => {
+      const alpha = p.life * p.life;
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3.5);
+      glow.addColorStop(0, `hsla(${p.hue}, 100%, 76%, ${alpha})`);
+      glow.addColorStop(0.35, `hsla(${p.hue + 25}, 95%, 65%, ${alpha * 0.42})`);
+      glow.addColorStop(1, `hsla(${p.hue + 45}, 100%, 60%, 0)`);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+    });
+
+    if (pointer) {
+      const core = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, 18);
+      core.addColorStop(0, 'rgba(255, 255, 255, 0.92)');
+      core.addColorStop(0.16, `hsla(${hue}, 100%, 78%, 0.8)`);
+      core.addColorStop(1, `hsla(${hue + 35}, 100%, 65%, 0)`);
+      ctx.beginPath();
+      ctx.arc(pointer.x, pointer.y, 18, 0, Math.PI * 2);
+      ctx.fillStyle = core;
+      ctx.fill();
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+    frameId = requestAnimationFrame(animateParticles);
   }
   animateParticles();
+
+  window.addEventListener('beforeunload', () => cancelAnimationFrame(frameId), { once: true });
 }

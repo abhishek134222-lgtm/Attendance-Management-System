@@ -1,6 +1,8 @@
 async function loadReport() {
   try {
-    const res = await fetch('/api/attendance/report');
+    const subject = document.getElementById('report-subject').value.trim();
+    const params = subject ? `?subject=${encodeURIComponent(subject)}` : '';
+    const res = await fetch(`/api/attendance/report${params}`);
     const report = await res.json();
     const tbody = document.getElementById('report-table-body');
     tbody.innerHTML = '';
@@ -27,3 +29,9 @@ async function loadReport() {
   }
 }
 loadReport();
+
+let reportFilterTimer;
+document.getElementById('report-subject').addEventListener('input', () => {
+  clearTimeout(reportFilterTimer);
+  reportFilterTimer = setTimeout(loadReport, 250);
+});

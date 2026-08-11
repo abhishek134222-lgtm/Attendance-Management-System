@@ -301,9 +301,12 @@ def recognize_and_mark():
 
     payload = request.get_json(silent=True) or {}
     image_data = payload.get('image')
+    subject = (payload.get('subject') or '').strip()
 
     if not image_data:
         return jsonify({"success": False, "message": "No image provided"}), 400
+    if not subject:
+        return jsonify({"success": False, "message": "Enter a subject before starting the scan"}), 400
 
     try:
         if ',' in image_data:
@@ -322,32 +325,40 @@ def recognize_and_mark():
     if len(faces) == 0:
         return jsonify({"success": False, "message": "No face detected in captured image"}), 400
 
-    (x, y, w, h) = faces[0]
-    face_img = gray[y:y+h, x:x+w]
-    label_id, confidence = recognizer.predict(face_img)
-
-    if confidence >= 70:
-        return jsonify({"success": False, "message": "Face not recognized"}), 400
-
-    recognized_id = label_map.get(str(label_id))
-    if not recognized_id:
-        return jsonify({"success": False, "message": "Student record missing"}), 400
-
     conn = get_db()
-    student = conn.execute('SELECT * FROM students WHERE id=?', (int(recognized_id),)).fetchone()
-    if not student:
-        conn.close()
-        return jsonify({"success": False, "message": "Student record missing"})
-
     today = str(date.today())
-    conn.execute('''
-        INSERT INTO attendance (student_id, date, status) VALUES (?,?,?)
-        ON CONFLICT(student_id, date) DO UPDATE SET status='Present'
-    ''', (student['id'], today, 'Present'))
+    recognized_students = []
+    seen_ids = set()
+
+    for (x, y, w, h) in faces:
+        face_img = gray[y:y+h, x:x+w]
+        label_id, confidence = recognizer.predict(face_img)
+        recognized_id = label_map.get(str(label_id))
+        if confidence >= 70 or not recognized_id or recognized_id in seen_ids:
+            continue
+
+        student = conn.execute('SELECT * FROM students WHERE id=?', (int(recognized_id),)).fetchone()
+        if not student:
+            continue
+
+        conn.execute('''
+            INSERT INTO attendance (student_id, date, subject, status) VALUES (?,?,?,?)
+            ON CONFLICT(student_id, date, subject) DO UPDATE SET status='Present'
+        ''', (student['id'], today, subject, 'Present'))
+        seen_ids.add(recognized_id)
+        recognized_students.append({
+            "id": student['id'], "name": student['name'], "roll_no": student['roll_no'],
+            "confidence": round(float(confidence), 1)
+        })
+
     conn.commit()
     conn.close()
 
-    return jsonify({"success": True, "message": f"{student['name']} marked Present"})
+    if not recognized_students:
+        return jsonify({"success": False, "message": "No registered faces recognized", "students": []})
+
+    names = ', '.join(student['name'] for student in recognized_students)
+    return jsonify({"success": True, "message": f"{names} marked Present", "students": recognized_students})
 
 # ================= MANUAL ATTENDANCE =================
 
@@ -355,41 +366,59 @@ def recognize_and_mark():
 def mark_manual():
     data = request.json
     att_date = data.get('date')
+    subject = (data.get('subject') or '').strip()
     records = data.get('records', [])
+
+    if not att_date or not subject:
+        return jsonify({"message": "Date and subject are required"}), 400
 
     conn = get_db()
     for r in records:
         conn.execute('''
-            INSERT INTO attendance (student_id, date, status) VALUES (?,?,?)
-            ON CONFLICT(student_id, date) DO UPDATE SET status=excluded.status
-        ''', (r['student_id'], att_date, r['status']))
+            INSERT INTO attendance (student_id, date, subject, status) VALUES (?,?,?,?)
+            ON CONFLICT(student_id, date, subject) DO UPDATE SET status=excluded.status
+        ''', (r['student_id'], att_date, subject, r['status']))
     conn.commit()
     conn.close()
     return jsonify({"message": "Attendance saved"})
 
 @app.route('/api/attendance/date/<att_date>', methods=['GET'])
 def get_attendance_by_date(att_date):
+    subject = request.args.get('subject', '').strip()
     conn = get_db()
-    rows = conn.execute('''
-        SELECT a.id, s.name, s.roll_no, s.class, a.status
+    query = '''
+        SELECT a.id, s.name, s.roll_no, s.class, a.subject, a.status
         FROM attendance a JOIN students s ON a.student_id = s.id
-        WHERE a.date = ? ORDER BY s.roll_no
-    ''', (att_date,)).fetchall()
+        WHERE a.date = ?
+    '''
+    params = [att_date]
+    if subject:
+        query += ' AND a.subject = ?'
+        params.append(subject)
+    rows = conn.execute(query + ' ORDER BY s.roll_no, a.subject', params).fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])
 
 @app.route('/api/attendance/report', methods=['GET'])
 def report():
+    subject = request.args.get('subject', '').strip()
     conn = get_db()
-    rows = conn.execute('''
+    query = '''
         SELECT s.id, s.name, s.roll_no, s.class,
         COUNT(a.id) as total_days,
         SUM(CASE WHEN a.status='Present' THEN 1 ELSE 0 END) as present_days
         FROM students s
         LEFT JOIN attendance a ON s.id = a.student_id
+    '''
+    params = []
+    if subject:
+        query += ' AND a.subject = ?'
+        params.append(subject)
+    query += '''
         GROUP BY s.id
         ORDER BY s.roll_no
-    ''').fetchall()
+    '''
+    rows = conn.execute(query, params).fetchall()
     conn.close()
 
     result = []

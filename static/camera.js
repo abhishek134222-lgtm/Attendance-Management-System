@@ -1,43 +1,82 @@
 let stream = null;
+let scanTimer = null;
+let scanInProgress = false;
 
-document.getElementById('start-camera-btn').addEventListener('click', async () => {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-    const video = document.getElementById('camera-video');
-    video.srcObject = stream;
-    video.style.display = 'block';
-    document.getElementById('start-camera-btn').style.display = 'none';
-    document.getElementById('scan-btn').style.display = 'inline-block';
-  } catch (err) {
-    document.getElementById('result-box').innerHTML = '<span style="color:#f87171;">Camera access denied or unavailable</span>';
-  }
-});
+const video = document.getElementById('camera-video');
+const canvas = document.getElementById('camera-canvas');
+const startButton = document.getElementById('start-camera-btn');
+const stopButton = document.getElementById('stop-camera-btn');
+const resultBox = document.getElementById('result-box');
+const statusBox = document.getElementById('camera-status');
+const recognitionList = document.getElementById('recognition-list');
+const subjectInput = document.getElementById('camera-subject');
 
-document.getElementById('scan-btn').addEventListener('click', async () => {
-  const video = document.getElementById('camera-video');
-  const canvas = document.getElementById('camera-canvas');
+function setStatus(text, active = false) {
+  statusBox.innerHTML = `<span class="${active ? 'is-live' : ''}"></span> ${text}`;
+}
+
+function stopCamera() {
+  window.clearInterval(scanTimer);
+  scanTimer = null;
+  if (stream) stream.getTracks().forEach((track) => track.stop());
+  stream = null;
+  video.srcObject = null;
+  video.classList.remove('is-active');
+  startButton.style.display = 'block';
+  stopButton.style.display = 'none';
+  setStatus('Camera offline');
+  resultBox.textContent = 'Live scanning paused.';
+}
+
+async function scanFrame() {
+  if (scanInProgress || !stream || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+  scanInProgress = true;
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  const imageData = canvas.toDataURL('image/jpeg', 0.8);
-
-  const resultBox = document.getElementById('result-box');
-  resultBox.innerHTML = '<span style="color:#a78bfa;">Scanning...</span>';
-
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
   try {
-    const res = await fetch('/api/attendance/recognize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: imageData })
+    const response = await fetch('/api/attendance/recognize', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.76), subject: subjectInput.value.trim() })
     });
-    const data = await res.json();
-
+    const data = await response.json();
     if (data.success) {
-      resultBox.innerHTML = `<span style="color:#4ade80;">✓ ${data.message}</span>`;
-    } else {
-      resultBox.innerHTML = `<span style="color:#f87171;">${data.message}</span>`;
+      resultBox.className = 'result-box success';
+      resultBox.textContent = data.message;
+      recognitionList.innerHTML = data.students.map((student) => `<div class="recognition-chip">✓ ${student.name}<small>Roll ${student.roll_no}</small></div>`).join('');
+    } else if (data.message !== 'No registered faces recognized' && data.message !== 'No face detected in captured image') {
+      resultBox.className = 'result-box warning';
+      resultBox.textContent = data.message;
     }
-  } catch (err) {
-    resultBox.innerHTML = '<span style="color:#f87171;">Cannot connect to server</span>';
+  } catch (error) {
+    resultBox.className = 'result-box warning';
+    resultBox.textContent = 'Connection to the scanner was lost.';
+  } finally { scanInProgress = false; }
+}
+
+startButton.addEventListener('click', async () => {
+  if (!subjectInput.value.trim()) {
+    showToast('Please enter a subject name', 'error');
+    subjectInput.focus();
+    return;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    video.srcObject = stream;
+    video.classList.add('is-active');
+    startButton.style.display = 'none';
+    stopButton.style.display = 'block';
+    setStatus('Live scan active', true);
+    resultBox.className = 'result-box';
+    resultBox.textContent = 'Looking for registered faces…';
+    await video.play();
+    scanFrame();
+    scanTimer = window.setInterval(scanFrame, 1400);
+  } catch (error) {
+    resultBox.className = 'result-box warning';
+    resultBox.textContent = 'Camera access was denied or is unavailable.';
   }
 });
+
+stopButton.addEventListener('click', stopCamera);
+window.addEventListener('beforeunload', stopCamera);
