@@ -249,7 +249,7 @@ def capture_face(student_id):
     return jsonify({
         "success": True,
         "message": f"{captured_now} new photos captured (total {count}) for {student['name']}",
-        "count": captured_now
+        "count": count
     })
 
 # ================= TRAINING =================
