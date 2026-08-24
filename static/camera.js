@@ -4,7 +4,7 @@ let scanInProgress = false;
 let facingMode = 'user';
 
 const video = document.getElementById('camera-video');
-const canvas = document.getElementById('camera-canvas');
+const captureCanvas = document.getElementById('camera-canvas');
 const stage = document.querySelector('.camera-stage');
 const startButton = document.getElementById('start-camera-btn');
 const stopButton = document.getElementById('stop-camera-btn');
@@ -72,13 +72,13 @@ function waitForVideo() {
 async function scanFrame() {
   if (scanInProgress || !stream || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth) return;
   scanInProgress = true;
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  captureCanvas.width = video.videoWidth;
+  captureCanvas.height = video.videoHeight;
+  captureCanvas.getContext('2d').drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
   try {
     const response = await fetch('/api/attendance/recognize', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.76), subject: subjectInput.value.trim() })
+      body: JSON.stringify({ image: captureCanvas.toDataURL('image/jpeg', 0.76), subject: subjectInput.value.trim() })
     });
     const data = await response.json();
     if (data.success) {
